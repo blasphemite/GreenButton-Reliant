@@ -9,12 +9,6 @@ from typing_extensions import Annotated
 import xmltodict
 from dateutil import parser as dateutil
 
-from dotenv import dotenv_values
-
-config = dotenv_values(".env")
-
-app = typer.Typer()
-
 
 class GreenButton:
     class request:
