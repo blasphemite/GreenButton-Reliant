@@ -1,0 +1,5 @@
+httpx==0.24.1
+python-dateutil==2.8.2
+python-dotenv==1.0.0
+typer==0.7.0
+xmltodict==0.13.0
