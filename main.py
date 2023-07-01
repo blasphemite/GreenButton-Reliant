@@ -5,9 +5,9 @@ from zipfile import ZipFile
 
 import httpx
 import typer
-from typing_extensions import Annotated
 import xmltodict
 from dateutil import parser as dateutil
+from typing_extensions import Annotated
 
 
 class GreenButton:
@@ -193,14 +193,14 @@ class GreenButton:
 
         for entry in entries:
             title = entry["ns:title"]
-            if title != None:
+            if title is not None:
                 print(f"Skipping: {title}")
                 continue
             content = entry["ns:content"]
             interval_blocks = content["IntervalBlock"]
             for interval_block in interval_blocks:
                 start = interval_block["interval"]["start"]
-                interval = interval_block["interval"]["duration"]
+                # interval = interval_block["interval"]["duration"]
                 readings = interval_block["IntervalReading"]
                 for reading in readings:
                     time_period = reading["timePeriod"]
@@ -232,10 +232,10 @@ def main(
 ):
     gb = GreenButton(email, password)
 
-    if save_zip == True and file_path == "GreenButtonData.csv":
+    if save_zip is True and file_path == "GreenButtonData.csv":
         file_path = "GreenButtonData.zip"
 
-    if save_zip == True:
+    if save_zip is True:
         if not file_path.endswith(".zip"):
             raise Exception("save_zip=True requires file_path to end with .zip")
         gb.export_zip(save_path=file_path)
