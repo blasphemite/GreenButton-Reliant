@@ -1,5 +1,6 @@
 import csv
 import io
+import sys
 from datetime import datetime, timedelta
 from zipfile import ZipFile
 
@@ -7,6 +8,7 @@ import httpx
 import typer
 import xmltodict
 from dateutil import parser as dateutil
+from loguru import logger
 from typing_extensions import Annotated
 
 
@@ -42,6 +44,7 @@ class GreenButton:
 
         with open(save_path, "w", newline="") as f:
             writer = csv.writer(f)
+            writer.writerow(["start", "duration_s", "cost"])
             writer.writerows(self.usage)
 
     def export_zip(self, save_path: str = "GreenButtonData.zip") -> None:
@@ -87,7 +90,6 @@ class GreenButton:
             raise Exception(f"Login failed ({r.status_code})")
 
         r = self.client.get(r.next_request.url, headers=self.req.headers, timeout=None)
-
         self._logged_in = True
 
     def __get_usage_zip(
@@ -124,6 +126,7 @@ class GreenButton:
             zip_data = response.read()
 
         if not save_zip:
+            logger.info(f"Returning ZIP data ({len(zip_data)} bytes))")
             return zip_data
         else:
             if "save_path" not in kwargs.keys():
@@ -211,13 +214,18 @@ class GreenButton:
 
         return [usage, entries, xml_created_date]
 
+    def get_usage_zip(self, **kwargs) -> bytes:
+        return self.__get_usage_zip(**kwargs)
+
 
 def main(
     email: Annotated[str, typer.Option] = typer.Option(
-        ..., prompt=True, help="Reliant account email"
+        ..., "--email", "-e", prompt=True, help="Reliant account email"
     ),
     password: Annotated[str, typer.Option] = typer.Option(
         ...,
+        "--password",
+        "-p",
         prompt=True,
         confirmation_prompt=False,
         hide_input=True,
@@ -232,10 +240,10 @@ def main(
 ):
     gb = GreenButton(email, password)
 
-    if save_zip is True and file_path == "GreenButtonData.csv":
-        file_path = "GreenButtonData.zip"
-
-    if save_zip is True:
+    if save_zip:
+        if file_path == "GreenButtonData.csv":
+            logger.info("Defaulting to 'GreenButtonData.zip'")
+            file_path = "GreenButtonData.zip"
         if not file_path.endswith(".zip"):
             raise Exception("save_zip=True requires file_path to end with .zip")
         gb.export_zip(save_path=file_path)
@@ -244,4 +252,6 @@ def main(
 
 
 if __name__ == "__main__":
+    logger.remove()
+    logger.add(sys.stdout, level="INFO")
     typer.run(main)
