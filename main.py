@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import csv
 import io
 import sys
@@ -9,6 +11,7 @@ import typer
 import xmltodict
 from dateutil import parser as dateutil
 from loguru import logger
+from rich import print
 from typing_extensions import Annotated
 
 
