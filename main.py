@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# import json
 import csv
 import io
 import sys
@@ -17,11 +18,11 @@ from typing_extensions import Annotated
 
 class GreenButton:
     class request:
-        headers = {
+        headers: dict = {
             "Referrer": "https://my.reliant.com/public/altLogon.htm",
             "Origin": "https://my.reliant.com",
         }
-        data = {
+        data: dict = {
             "TEALcookie": "",
             "USER": "",
             "PASSWORD": "",
@@ -30,16 +31,29 @@ class GreenButton:
         }
 
         def __init__(self, email: str = None, password: str = None):
-            self.data["USER"] = email
-            self.data["PASSWORD"] = password
+            self.data["USER"]: str = email
+            self.data["PASSWORD"]: str = password
 
-    def __init__(self, email, password, populate: bool = False):
+    def __init__(self, email: str, password: str, populate: bool = False):
         self.client = httpx.Client()
         self.req = self.request(email, password)
         self._logged_in = False
 
         if populate:
             self.__populate()
+
+    #    def export_json(self, save_path: str = "GreenButtonData.json") -> None:
+    #        if not hasattr(self, "usage"):
+    #            self.__populate()
+    #
+    #        entries = []
+    #        for ln in csv.DictReader(
+    #            self.usage, fieldnames=("start", "duration_s", "cost")
+    #        ):
+    #            entries.append(ln)
+    #
+    #        with open(save_path, "w", newline="") as f:
+    #            json.dump(entries, f)
 
     def export_csv(self, save_path: str = "GreenButtonData.csv") -> None:
         if not hasattr(self, "usage"):
@@ -54,11 +68,11 @@ class GreenButton:
         self.__get_usage_zip(save_zip=True, save_path=save_path)
 
     def __populate(self) -> None:
-        zip_data = self.__get_usage_zip()
-        data_dict = self.__dict_from_zip(zip_data)
+        zip_data: bytes = self.__get_usage_zip()
+        data_dict: dict = self.__dict_from_zip(zip_data)
         usage, entries, xml_created_date = self.__parse_data_dict(data_dict)
-        self.usage = usage
-        self.last_xml_update = xml_created_date
+        self.usage: str = usage
+        self.last_xml_update: str = xml_created_date
 
     def __login(self, force: bool = False) -> None:
         """
@@ -97,7 +111,7 @@ class GreenButton:
 
     def __get_usage_zip(
         self, login_if_not_already: bool = True, save_zip: bool = False, **kwargs
-    ) -> bytes | None:
+    ) -> bytes:
         """
         > Get the GreenButtonData.zip data
             - login_if_not_already   [ bool ]    Login if not already logged in
@@ -111,7 +125,7 @@ class GreenButton:
         if not self._logged_in and login_if_not_already:
             self.__login()
 
-        now = datetime.now()
+        now: datetime = datetime.now()
         timeframe = (now, now - timedelta(hours=1))
         start = timeframe[0].strftime("%m%Y")
         end = timeframe[1].strftime("%m%Y")
@@ -137,7 +151,6 @@ class GreenButton:
 
             with open(kwargs["save_path"], "wb") as f:
                 f.write(zip_data)
-                return
 
     def __get_data_dict(self, **kwargs) -> dict:
         """
@@ -235,23 +248,45 @@ def main(
         help="Reliant account password",
     ),
     save_zip: Annotated[bool, typer.Option] = typer.Option(
-        False, "--save-zip", "-sz", help="Export a ZIP archive instead of a CSV"
+        False, "--save-zip", "-sZ", help="Export a ZIP archive instead of a CSV"
     ),
+    #    save_json: Annotated[bool, typer.Option] = typer.Option(
+    #        False, "--save-json", "-sJ", help="Export a JSON file instead of a CSV"
+    #    ),
     file_path: Annotated[str, typer.Argument] = typer.Argument(
         "GreenButtonData.csv", help="Save path for the output file"
     ),
 ):
+    #    if save_json and save_zip:
+    #        raise Exception("Cannot specify both save_json and save_zip")
+
     gb = GreenButton(email, password)
 
-    if save_zip:
+    def do_filepath(file_path: str, extension: str = ".csv") -> str:
         if file_path == "GreenButtonData.csv":
-            logger.info("Defaulting to 'GreenButtonData.zip'")
-            file_path = "GreenButtonData.zip"
-        if not file_path.endswith(".zip"):
-            raise Exception("save_zip=True requires file_path to end with .zip")
-        gb.export_zip(save_path=file_path)
+            file_path = f"GreenButtonData{extension}"
 
-    gb.export_csv(save_path=file_path)
+        default_save_path = f"GreenButtonData{extension}"
+
+        if file_path == default_save_path:
+            logger.debug(f"Using default save path: {default_save_path}")
+            return default_save_path
+        else:
+            logger.debug(f"Using save path: {file_path}")
+            return file_path
+
+    if save_zip:
+        __extension = ".zip"
+        file_path = do_filepath(file_path, extension=__extension)
+        gb.export_zip(save_path=file_path)
+    #    elif save_json:
+    #        __extension = ".json"
+    #        file_path = do_filepath(file_path, extension=__extension)
+    #        gb.export_json(save_path=file_path)
+    else:
+        __extension = ".csv"
+        file_path = do_filepath(file_path, extension=__extension)
+        gb.export_csv(save_path=file_path)
 
 
 if __name__ == "__main__":
